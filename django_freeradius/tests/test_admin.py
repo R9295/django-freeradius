@@ -192,3 +192,16 @@ class TestAdmin(TestCase):
         RadiusPostAuth.objects.filter(username='steve').update(date='2017-06-10 10:50:00')
         call_command('delete_old_postauth', 3)
         self.assertEqual(RadiusPostAuth.objects.filter(username='steve').count(), 0)
+
+    def test_delete_unterminated_radacct(self):
+        RadiusAccounting.objects.create(
+            unique_id='666', username='bob', nas_ip_address='127.0.0.1', start_time='2017-06-10 10:50:00',
+            session_time='5', authentication='RADIUS',
+            connection_info_start='f', connection_info_stop='hgh',
+            input_octets='1', output_octets='4'
+            )
+        call_command('cleanup_stale_radacct', 30)
+        session = RadiusAccounting.objects.filter(unique_id='666')[0]
+        self.assertNotEqual(session.stop_time, None)
+        self.assertNotEqual(session.session_time, None)
+        self.assertEqual(session.update_time,session.stop_time)
